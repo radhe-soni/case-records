@@ -27,5 +27,18 @@ RUN $FLUTTER_HOME/bin/flutter channel master && $FLUTTER_HOME/bin/flutter upgrad
 # Change the PUB_CACHE to /workspace so dependencies are preserved.
 ENV PUB_CACHE=/workspace/.pub_cache
 
+RUN cd /home/gitpod && \
+    wget -qO android_studio.zip \
+    https://dl.google.com/dl/android/studio/ide-zips/3.3.0.20/android-studio-ide-182.5199772-linux.zip && \
+    unzip android_studio.zip && \
+    rm -f android_studio.zip
+
+# TODO(tianhaoz95): make the name of the SDK file into an environment variable to avoid maintainance issue
+RUN mkdir -p /home/gitpod/android-sdk && \
+    cd /home/gitpod/android-sdk && \
+    wget https://dl.google.com/android/repository/sdk-tools-linux-4333796.zip && \
+    unzip sdk-tools-linux-4333796.zip && \
+    rm -f sdk-tools-linux-4333796.zip
+
 # add executables to PATH
 RUN echo 'export PATH=${FLUTTER_HOME}/bin:${FLUTTER_HOME}/bin/cache/dart-sdk/bin:${PUB_CACHE}/bin:${FLUTTER_HOME}/.pub-cache/bin:$PATH' >>~/.bashrc
