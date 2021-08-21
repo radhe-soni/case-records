@@ -1,10 +1,11 @@
 import 'dart:async';
 import 'package:case_records/controller/form_controller.dart';
 import 'package:case_records/model/case_record.dart';
+import 'package:case_records/service/form_controller_factory.dart';
+import 'package:case_records/view/form_constants.dart';
 import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 
-final Color PRIMARY_COLOR = Colors.lightGreen[900]!;
 
 class CaseRecordForm extends StatefulWidget {
   final Function(CaseRecord caseRecord) onChange;
@@ -20,24 +21,6 @@ class CaseRecordForm extends StatefulWidget {
 class _CaseRecordFormState extends State<CaseRecordForm> with RestorationMixin {
   final _formKey = GlobalKey<FormState>();
   final _scaffoldKey = GlobalKey<ScaffoldMessengerState>();
-  final _formLabelStyle = TextStyle(
-    color: Colors.black87,
-    fontSize: 17,
-    fontWeight: FontWeight.bold,
-  );
-  final _focusedBorder = UnderlineInputBorder(
-    borderSide: BorderSide(color: PRIMARY_COLOR, width: 2.0),
-  );
-  final _enabledBorder = UnderlineInputBorder(
-      borderSide: BorderSide(color: Colors.grey, width: 1.0));
-
-  InputDecoration createInputDecoration(String label) {
-    return InputDecoration(
-        labelText: label,
-        labelStyle: _formLabelStyle,
-        focusedBorder: _focusedBorder,
-        enabledBorder: _enabledBorder);
-  }
 
   static Route<DateTime> _datePickerRoute(
     BuildContext context,
@@ -60,6 +43,7 @@ class _CaseRecordFormState extends State<CaseRecordForm> with RestorationMixin {
       new TextEditingController();
   final TextEditingController _caseDescriptionController =
       new TextEditingController();
+  final TextEditingController _remarkController = new TextEditingController();
   final TextEditingController _fileDateController = new TextEditingController();
   final TextEditingController _previousDateController =
       new TextEditingController();
@@ -111,6 +95,7 @@ class _CaseRecordFormState extends State<CaseRecordForm> with RestorationMixin {
     _fileDateController.text = caseRecord.filingDate;
     _previousDateController.text = caseRecord.previousHearingDate;
     _nextDateController.text = caseRecord.nextHearingDate;
+    _remarkController.text = caseRecord.remark;
   }
 
   @override
@@ -189,7 +174,7 @@ class _CaseRecordFormState extends State<CaseRecordForm> with RestorationMixin {
                 controller: _clientNameController,
                 decoration: createInputDecoration("Client Name"),
                 validator: (value) {
-                  if(value == null || value == "")
+                  if (value == null || value == "")
                     return "Client Name is Required";
                   return null;
                 },
@@ -238,10 +223,19 @@ class _CaseRecordFormState extends State<CaseRecordForm> with RestorationMixin {
                   nextHearingDatePicker.present();
                 },
               ),
+              TextFormField(
+                  key: Key("remark"),
+                  controller: _remarkController,
+                  decoration: createInputDecoration("Remark"),
+                  validator: (value) {
+                    return null;
+                  },
+                  onChanged: (newValue) => widget
+                      .onChange(widget.caseRecord.value.withRemark(newValue))),
               Padding(
                 padding: const EdgeInsets.symmetric(vertical: 16.0),
                 child: ElevatedButton(
-                  onPressed: _submitForm ,
+                  onPressed: _submitForm,
                   child: const Text('Submit'),
                 ),
               )
@@ -250,45 +244,45 @@ class _CaseRecordFormState extends State<CaseRecordForm> with RestorationMixin {
         ));
   }
 
-  void _submitForm() async{
+  void _submitForm() async {
     // Validate returns true if the form is valid, or false
     // otherwise.
     if (_formKey.currentState!.validate()) {
       // If the form is valid, proceed.
       CaseRecord feedbackForm = widget.caseRecord.value;
       clearForm();
-      FormController formController = FormController();
-
       _showSnackbar("Submitting Feedback");
 
       // Submit 'feedbackForm' and save it in Google Sheets.
-      formController.submitForm(feedbackForm, (String response) {
-        print("Response: $response");
-        if (response == FormController.STATUS_SUCCESS) {
-          // Feedback is saved succesfully in Google Sheets.
-          showDialog<String>(
-              context: context,
-              builder: (BuildContext context) => AlertDialog(
-                    title: const Text('Record Saved'),
-                    actions: <Widget>[
-                      TextButton(
-                        onPressed: () {
-
-                          Navigator.pop(context, 'OK');
-                        },
-                        child: const Text('OK'),
-                      ),
-                    ],
-                  ));
-        } else {
-          // Error Occurred while saving data in Google Sheets.
-          _showSnackbar("Error Occurred!");
-        }
+      FormControllerSingletonExtension.formController
+          .then((FormController formController) {
+        formController.submitForm(feedbackForm, (String response) {
+          print("Response: $response");
+          if (response == FormController.STATUS_SUCCESS) {
+            // Feedback is saved succesfully in Google Sheets.
+            showDialog<String>(
+                context: context,
+                builder: (BuildContext context) => AlertDialog(
+                      title: const Text('Record Saved'),
+                      actions: <Widget>[
+                        TextButton(
+                          onPressed: () {
+                            Navigator.pop(context, 'OK');
+                          },
+                          child: const Text('OK'),
+                        ),
+                      ],
+                    ));
+          } else {
+            // Error Occurred while saving data in Google Sheets.
+            _showSnackbar("Error Occurred!");
+          }
+        });
       });
     }
   }
 
-  void clearForm(){
+  void clearForm() {
     setState(() {
       widget.onChange(CaseRecord.defaultRecord());
       _filingDate.value = DateTime.now();
@@ -299,8 +293,8 @@ class _CaseRecordFormState extends State<CaseRecordForm> with RestorationMixin {
       _nextDate.value = DateTime.now();
       _nextDateController.text = widget.caseRecord.value.nextHearingDate;
       _clientNameController.text = "";
-      _caseDescriptionController.text= "";
-
+      _caseDescriptionController.text = "";
+      _remarkController.text = "";
     });
   }
 

@@ -1,6 +1,7 @@
 import 'dart:async';
 import 'package:case_records/controller/form_controller.dart';
 import 'package:case_records/model/case_record.dart';
+import 'package:case_records/service/form_controller_factory.dart';
 import 'package:flutter/material.dart';
 
 class CaseRecords extends StatefulWidget {
@@ -57,23 +58,30 @@ class _CaseRecordsState extends State<CaseRecords> with RestorationMixin {
   List<TableRow> tableRows = [];
 
   void _fetchCaseRecords(DateTime? selectedDate) {
-    FormController formController = FormController();
     if (selectedDate != null) {
       List<CaseRecord> caseRecords = [];
       String filterDate = "${selectedDate.toLocal()}".split(' ')[0];
       setState(() {
         _selectedDateController.text = filterDate;
       });
-      formController.fetchRecords(filterDate, (response) {
-        for (int i = 0; i < response.length; i++) {
-          caseRecords.add(CaseRecord.fromJson(response[i]));
-        }
-        List<TableRow> trs = [tableHeader()];
-        trs.addAll(
-            caseRecords.map((rec) => tableRowFromCaseRecord(rec)).toList());
-        print(caseRecords);
-        setState(() {
-          tableRows = trs;
+      FormControllerSingletonExtension.formController
+          .then((FormController formController) {
+        formController.fetchRecords(filterDate, (response) {
+          for (int i = 0; i < response.length; i++) {
+            caseRecords.add(CaseRecord.fromJson(response[i]));
+          }
+          List<TableRow> trs = [tableHeader()];
+          trs.addAll(
+              caseRecords
+                  .asMap()
+                  .entries
+                  .map((entry) =>
+                  tableRowFromCaseRecord(entry.key, entry.value))
+                  .toList());
+          print(caseRecords);
+          setState(() {
+            tableRows = trs;
+          });
         });
       });
     }
@@ -83,6 +91,10 @@ class _CaseRecordsState extends State<CaseRecords> with RestorationMixin {
     TextStyle headerStyle = TextStyle(fontWeight: FontWeight.bold);
     return TableRow(
       children: <Widget>[
+        TableCell(
+          child: Text("S.No.",
+              style: headerStyle, textAlign: TextAlign.center),
+        ),
         TableCell(
           child: Text("Client Name",
               style: headerStyle, textAlign: TextAlign.center),
@@ -101,27 +113,49 @@ class _CaseRecordsState extends State<CaseRecords> with RestorationMixin {
         ),
         TableCell(
           child:
+              Text("Remark", style: headerStyle, textAlign: TextAlign.center),
+        ),
+        TableCell(
+          child:
               Text("Action", style: headerStyle, textAlign: TextAlign.center),
         ),
       ],
     );
   }
 
-  TableRow tableRowFromCaseRecord(CaseRecord caseRecord) {
+  TableRow tableRowFromCaseRecord(int index, CaseRecord caseRecord) {
     return TableRow(
       children: <Widget>[
         TableCell(
-          child: Text(caseRecord.clientName),
+          child: Padding(
+              padding: const EdgeInsets.all(8.0),
+              child: Text((index+1).toString())),
         ),
         TableCell(
-          child: Text(caseRecord.caseDescription),
+          child: Padding(
+              padding: const EdgeInsets.all(8.0),
+              child: Text(caseRecord.clientName)),
         ),
         TableCell(
-          child: Text(caseRecord.filingDate.split('T')[0]),
+          child: Padding(
+              padding: const EdgeInsets.all(8.0),
+              child: Text(caseRecord.caseDescription)),
         ),
         TableCell(
-          child: Text(caseRecord.previousHearingDate.split('T')[0]),
+          child: Padding(
+              padding: const EdgeInsets.all(8.0),
+              child: Text(caseRecord.filingDate.split('T')[0])),
         ),
+        TableCell(
+          child: Padding(
+              padding: const EdgeInsets.all(8.0),
+              child: Text(caseRecord.previousHearingDate.split('T')[0])),
+        ),
+        TableCell(
+            child: Padding(
+          padding: const EdgeInsets.all(8.0),
+          child: Text(caseRecord.remark),
+        )),
         TableCell(
           child: Padding(
             padding: const EdgeInsets.symmetric(vertical: 16.0),
@@ -160,6 +194,15 @@ class _CaseRecordsState extends State<CaseRecords> with RestorationMixin {
                   Container(
                     margin: EdgeInsets.all(10),
                     child: Table(
+                      columnWidths: {
+                        0: FlexColumnWidth(1),
+                        1: FlexColumnWidth(3),
+                        2: FlexColumnWidth(8),
+                        3: FlexColumnWidth(2),
+                        4: FlexColumnWidth(2),
+                        5: FlexColumnWidth(8),
+                        6: FlexColumnWidth(1),
+                      },
                       border: TableBorder.all(),
                       defaultVerticalAlignment:
                           TableCellVerticalAlignment.middle,

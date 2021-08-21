@@ -4,9 +4,10 @@ import '../model/case_record.dart';
 
 
 class FormController {
-
+  final String URL;
+  final String SHEET_ID;
   // Google App Script Web URL.
-  static String URL = "https://script.google.com/macros/s/AKfycbwKAvsFyORfWYK7pWN768gT0j6XDa8csVl9t4S38OHmMPs11ew2dgtXKKPML4lq8_X6/exec";
+  FormController(this.URL, this.SHEET_ID);
 
   // Success Status Message
   static const STATUS_SUCCESS = "SUCCESS";
@@ -17,7 +18,7 @@ class FormController {
       CaseRecord caseRecord, void Function(String) callback) async {
     try {
       print(caseRecord.toJson());
-      await http.post(Uri.parse(URL), body: caseRecord.toJson()).then((response) async {
+      await http.post(Uri.parse(urlWithSheetId()), body: caseRecord.toJson()).then((response) async {
         if (response.statusCode == 302) {
           String url = response.headers['location']!;
           await http.get(Uri.parse(url)).then((response) {
@@ -32,11 +33,13 @@ class FormController {
     }
   }
 
+  String urlWithSheetId() => URL+"?sheetId="+SHEET_ID;
+
   void fetchRecords(
       String filterDate, void Function(List<dynamic>) callback) async {
     try {
       print("fetching records for" + filterDate);
-      await http.get(Uri.parse(URL+"?filterDate="+filterDate)).then((response) async {
+      await http.get(Uri.parse(urlWithSheetId()+"&filterDate="+filterDate)).then((response) async {
         if (response.statusCode == 302) {
           String url = response.headers['location']!;
           await http.get(Uri.parse(url)).then((response) {
@@ -50,5 +53,9 @@ class FormController {
     } catch (e) {
       print("FormController:fetchRecords ${e}");
     }
+  }
+
+  void createBackup(void Function(List<dynamic>) callback) async{
+
   }
 }
