@@ -8,7 +8,10 @@ import 'package:google_sign_in/google_sign_in.dart';
 class CaseRecords extends StatefulWidget {
   final Function(CaseRecord caseRecord) onChange;
   final GoogleSignInAccount googleSignInAccount;
-  const CaseRecords({Key? key, required this.onChange, required this.googleSignInAccount}) : super(key: key);
+
+  const CaseRecords(
+      {Key? key, required this.onChange, required this.googleSignInAccount})
+      : super(key: key);
 
   @override
   _CaseRecordsState createState() => _CaseRecordsState();
@@ -73,23 +76,22 @@ class _CaseRecordsState extends State<CaseRecords> with RestorationMixin {
         formController.fetchRecords(filterDate, (List<CaseRecord> response) {
           caseRecords.addAll(response);
           List<TableRow> trs = [];
-          if(caseRecords.isNotEmpty){
+          if (caseRecords.isNotEmpty) {
             trs = [tableHeader()];
-            trs.addAll(
-                caseRecords
-                    .asMap()
-                    .entries
-                    .map((entry) =>
-                    tableRowFromCaseRecord(entry.key, entry.value))
-                    .toList());
-          }
-          else{
-            trs = [TableRow(
-                children: <Widget>[
-                  TableCell(
-                    child: Text("No Records Found!!!",
-                        textAlign: TextAlign.center),
-                  )])];
+            trs.addAll(caseRecords
+                .asMap()
+                .entries
+                .map((entry) => tableRowFromCaseRecord(entry.key, entry.value))
+                .toList());
+          } else {
+            trs = [
+              TableRow(children: <Widget>[
+                TableCell(
+                  child:
+                      Text("No Records Found!!!", textAlign: TextAlign.center),
+                )
+              ])
+            ];
           }
 
           setState(() {
@@ -105,8 +107,7 @@ class _CaseRecordsState extends State<CaseRecords> with RestorationMixin {
     return TableRow(
       children: <Widget>[
         TableCell(
-          child: Text("S.No.",
-              style: headerStyle, textAlign: TextAlign.center),
+          child: Text("S.No.", style: headerStyle, textAlign: TextAlign.center),
         ),
         TableCell(
           child: Text("Client Name",
@@ -142,7 +143,7 @@ class _CaseRecordsState extends State<CaseRecords> with RestorationMixin {
         TableCell(
           child: Padding(
               padding: const EdgeInsets.all(8.0),
-              child: Text((index+1).toString())),
+              child: Text((index + 1).toString())),
         ),
         TableCell(
           child: Padding(
@@ -210,11 +211,11 @@ class _CaseRecordsState extends State<CaseRecords> with RestorationMixin {
                       columnWidths: {
                         0: FlexColumnWidth(1),
                         1: FlexColumnWidth(3),
-                        2: FlexColumnWidth(8),
-                        3: FlexColumnWidth(2),
-                        4: FlexColumnWidth(2),
-                        5: FlexColumnWidth(8),
-                        6: FlexColumnWidth(1),
+                        2: FlexColumnWidth(6),
+                        3: FlexColumnWidth(3),
+                        4: FlexColumnWidth(3),
+                        5: FlexColumnWidth(7),
+                        6: FlexColumnWidth(2),
                       },
                       border: TableBorder.all(),
                       defaultVerticalAlignment:

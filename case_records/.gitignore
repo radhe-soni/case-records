@@ -58,3 +58,4 @@ neutralino.js
 # Neutralinojs related files
 .storage
 *.log
+**/**/google-services.json

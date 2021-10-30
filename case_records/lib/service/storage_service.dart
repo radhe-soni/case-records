@@ -15,6 +15,10 @@ class FileStorage implements AbstractStorage{
 
   Future<File> get localFile async {
     final path = await localPath;
+    File file = new File('$path/db.txt');
+    if(! await file.exists()){
+      file.create(recursive: true);
+    }
     return File('$path/db.txt');
   }
 
