@@ -4,6 +4,7 @@ import 'package:case_records/controller/form_controller.dart';
 import 'package:case_records/service/storage_service.dart';
 import 'package:case_records/service/web_storage_dummy.dart' if(dart.library.html) 'package:case_records/service/webstorage.dart' as webstorage;
 import 'package:flutter/foundation.dart';
+import 'package:google_sign_in/google_sign_in.dart';
 
 enum FormControllerSingleton{
   INSTANCE
@@ -12,7 +13,7 @@ extension FormControllerSingletonExtension on FormControllerSingleton{
   static final AbstractStorage storage = createStorageObject();
 
   static FormController? _formControllerCached;
-  static Future<FormController> get formController {
+  static Future<FormController> getInstance(GoogleSignInAccount googleSignInAccount) {
     if(_formControllerCached != null)
       return SynchronousFuture(_formControllerCached!);
     print('Creating formcontroller instance');
@@ -21,7 +22,7 @@ extension FormControllerSingletonExtension on FormControllerSingleton{
         throw new Exception("DB not initialised. App script url and sheet id not configured");
       }
       dynamic dbObject = convert.jsonDecode(dbData);
-      _formControllerCached = FormController(dbObject['appScriptUrl'], dbObject['sheetId']);
+      _formControllerCached = new FormController(googleSignInAccount, dbObject['sheetId']);
       return _formControllerCached!;
     });
   }

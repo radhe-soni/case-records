@@ -1,3 +1,5 @@
+import 'package:case_records/controller/create_sheet_controller.dart';
+
 class CaseRecord {
   final String clientName;
   final String caseDescription;
@@ -26,12 +28,12 @@ class CaseRecord {
 
   // Method to make GET parameters.
   Map toJson() => {
-        'clientName': clientName,
-        'caseDescription': caseDescription,
-        'filingDate': filingDate,
-        'previousHearingDate': previousHearingDate,
-        'nextHearingDate': nextHearingDate,
-        'remark': remark,
+    COLUMN_NAMES.clientName: clientName,
+    COLUMN_NAMES.caseDescription: caseDescription,
+    COLUMN_NAMES.filingDate: filingDate,
+    COLUMN_NAMES.previousHearingDate: previousHearingDate,
+    COLUMN_NAMES.nextHearingDate: nextHearingDate,
+    COLUMN_NAMES.remark: remark,
       };
 
   CaseRecord withFilingDate(String newValue) {

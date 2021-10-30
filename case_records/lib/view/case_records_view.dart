@@ -3,11 +3,12 @@ import 'package:case_records/controller/form_controller.dart';
 import 'package:case_records/model/case_record.dart';
 import 'package:case_records/service/form_controller_factory.dart';
 import 'package:flutter/material.dart';
+import 'package:google_sign_in/google_sign_in.dart';
 
 class CaseRecords extends StatefulWidget {
   final Function(CaseRecord caseRecord) onChange;
-
-  const CaseRecords({Key? key, required this.onChange}) : super(key: key);
+  final GoogleSignInAccount googleSignInAccount;
+  const CaseRecords({Key? key, required this.onChange, required this.googleSignInAccount}) : super(key: key);
 
   @override
   _CaseRecordsState createState() => _CaseRecordsState();
@@ -58,27 +59,39 @@ class _CaseRecordsState extends State<CaseRecords> with RestorationMixin {
   List<TableRow> tableRows = [];
 
   void _fetchCaseRecords(DateTime? selectedDate) {
+    setState(() {
+      tableRows = [];
+    });
     if (selectedDate != null) {
       List<CaseRecord> caseRecords = [];
       String filterDate = "${selectedDate.toLocal()}".split(' ')[0];
       setState(() {
         _selectedDateController.text = filterDate;
       });
-      FormControllerSingletonExtension.formController
+      FormControllerSingletonExtension.getInstance(widget.googleSignInAccount)
           .then((FormController formController) {
-        formController.fetchRecords(filterDate, (response) {
-          for (int i = 0; i < response.length; i++) {
-            caseRecords.add(CaseRecord.fromJson(response[i]));
+        formController.fetchRecords(filterDate, (List<CaseRecord> response) {
+          caseRecords.addAll(response);
+          List<TableRow> trs = [];
+          if(caseRecords.isNotEmpty){
+            trs = [tableHeader()];
+            trs.addAll(
+                caseRecords
+                    .asMap()
+                    .entries
+                    .map((entry) =>
+                    tableRowFromCaseRecord(entry.key, entry.value))
+                    .toList());
           }
-          List<TableRow> trs = [tableHeader()];
-          trs.addAll(
-              caseRecords
-                  .asMap()
-                  .entries
-                  .map((entry) =>
-                  tableRowFromCaseRecord(entry.key, entry.value))
-                  .toList());
-          print(caseRecords);
+          else{
+            trs = [TableRow(
+                children: <Widget>[
+                  TableCell(
+                    child: Text("No Records Found!!!",
+                        textAlign: TextAlign.center),
+                  )])];
+          }
+
           setState(() {
             tableRows = trs;
           });

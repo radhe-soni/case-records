@@ -5,13 +5,14 @@ import 'package:case_records/service/form_controller_factory.dart';
 import 'package:case_records/view/form_constants.dart';
 import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
+import 'package:google_sign_in/google_sign_in.dart';
 
 
 class CaseRecordForm extends StatefulWidget {
   final Function(CaseRecord caseRecord) onChange;
   final ValueListenable<CaseRecord> caseRecord;
-
-  CaseRecordForm({Key? key, required this.onChange, required this.caseRecord})
+  final GoogleSignInAccount googleSignInAccount;
+  CaseRecordForm({Key? key, required this.onChange, required this.caseRecord, required this.googleSignInAccount})
       : super(key: key);
 
   @override
@@ -254,7 +255,7 @@ class _CaseRecordFormState extends State<CaseRecordForm> with RestorationMixin {
       _showSnackbar("Submitting Feedback");
 
       // Submit 'feedbackForm' and save it in Google Sheets.
-      FormControllerSingletonExtension.formController
+      FormControllerSingletonExtension.getInstance(widget.googleSignInAccount)
           .then((FormController formController) {
         formController.submitForm(feedbackForm, (String response) {
           print("Response: $response");

@@ -1,13 +1,17 @@
 import 'dart:convert' as convert;
+import 'package:case_records/controller/create_sheet_controller.dart';
+import 'package:google_sign_in/google_sign_in.dart';
 import 'package:http/http.dart' as http;
+import 'package:logging/logging.dart';
 import '../model/case_record.dart';
 
 
 class FormController {
-  final String URL;
   final String SHEET_ID;
+  final GoogleSignInAccount googleSignInAccount;
+  final log = Logger('FormController');
   // Google App Script Web URL.
-  FormController(this.URL, this.SHEET_ID);
+  FormController(this.googleSignInAccount, this.SHEET_ID);
 
   // Success Status Message
   static const STATUS_SUCCESS = "SUCCESS";
@@ -16,42 +20,26 @@ class FormController {
   /// and sends HTTP GET request on [URL]. On successful response, [callback] is called.
   void submitForm(
       CaseRecord caseRecord, void Function(String) callback) async {
+    SheetController controller = await SheetControllerSingletonExtension.instance(googleSignInAccount);
     try {
       print(caseRecord.toJson());
-      await http.post(Uri.parse(urlWithSheetId()), body: caseRecord.toJson()).then((response) async {
-        if (response.statusCode == 302) {
-          String url = response.headers['location']!;
-          await http.get(Uri.parse(url)).then((response) {
-            callback(convert.jsonDecode(response.body)['status']);
-          });
-        } else {
-          callback(convert.jsonDecode(response.body)['status']);
-        }
-      });
+      Map record = caseRecord.toJson();
+      record['sheetId'] = SHEET_ID;
+      await controller.addRecord(record);
     } catch (e) {
       print("FormController:submitForm ${e}");
     }
   }
 
-  String urlWithSheetId() => URL+"?sheetId="+SHEET_ID;
-
   void fetchRecords(
-      String filterDate, void Function(List<dynamic>) callback) async {
+      String filterDate, void Function(List<CaseRecord>) callback) async {
+    SheetController controller = await SheetControllerSingletonExtension.instance(googleSignInAccount);
+    Map<Object, Object> request = {'sheetId': SHEET_ID, 'filterDate': filterDate};
     try {
-      print("fetching records for" + filterDate);
-      await http.get(Uri.parse(urlWithSheetId()+"&filterDate="+filterDate)).then((response) async {
-        if (response.statusCode == 302) {
-          String url = response.headers['location']!;
-          await http.get(Uri.parse(url)).then((response) {
-            callback(convert.jsonDecode(response.body));
-          });
-        } else {
-          print(response.body);
-          callback(convert.jsonDecode(response.body));
-        }
-      });
-    } catch (e) {
-      print("FormController:fetchRecords ${e}");
+      List<CaseRecord> caseRecords = await controller.fetchRecords(request);
+      callback(caseRecords);
+    } catch (e, stacktrace) {
+      log.severe("FormController:fetchRecords ${e}", stacktrace);
     }
   }
 

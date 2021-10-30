@@ -30,7 +30,6 @@
 .pub-cache/
 .pub/
 /build/
-
 # Web related
 lib/generated_plugin_registrant.dart
 
@@ -44,3 +43,18 @@ app.*.map.json
 /android/app/debug
 /android/app/profile
 /android/app/release
+**/dist/
+
+# Developer tools' files
+.lite_workspace.lua
+
+# Neutralinojs binaries and builds
+/bin
+/dist
+
+# Neutralinojs client (minified)
+neutralino.js
+
+# Neutralinojs related files
+.storage
+*.log
