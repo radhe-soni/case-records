@@ -40,6 +40,7 @@ dependencies:
   google_sign_in: ^5.0.7
   googleapis: ^4.0.0
   logging: ^1.0.2
+  syncfusion_flutter_calendar: ^19.3.47
 
 dev_dependencies:
   flutter_launcher_icons: "^0.9.1"

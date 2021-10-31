@@ -2,6 +2,7 @@ import 'package:case_records/controller/create_sheet_controller.dart';
 import 'package:case_records/model/case_record.dart';
 import 'package:case_records/service/form_controller_factory.dart';
 import 'package:case_records/service/storage_service.dart';
+import 'package:case_records/view/cal_view.dart';
 import 'package:case_records/view/case_record_form.dart';
 import 'package:case_records/view/case_records_view.dart';
 import 'package:flutter/foundation.dart';
@@ -46,6 +47,7 @@ class _HomeState extends State<Home> {
       tabs: [
         Tab(icon: Icon(Icons.home)),
         Tab(icon: Icon(Icons.list_alt)),
+        Tab(icon: Icon(Icons.calendar_view_month)),
       ],
     );
   }
@@ -66,6 +68,7 @@ class _HomeState extends State<Home> {
     };
   }
 
+  
   Widget getTabContent(tabChanger) {
     return TabBarView(
       // These are the contents of the tab views, below the tabs.
@@ -73,6 +76,7 @@ class _HomeState extends State<Home> {
         CaseRecordForm(
             onChange: modifySelectedRecord, caseRecord: _selectedRecord, googleSignInAccount: widget.googleSignInAccount),
         CaseRecords(onChange: tabChanger, googleSignInAccount: widget.googleSignInAccount),
+        CaseCalendar(googleSignInAccount: widget.googleSignInAccount)
       ],
     );
   }
@@ -98,6 +102,7 @@ class _HomeState extends State<Home> {
   @override
   void initState() {
     super.initState();
+    
     if (!dbInitialised) {
       widget.storage.readData().then((String dbData) {
         if (!["", null, false, 0].contains(dbData)) {
@@ -114,7 +119,7 @@ class _HomeState extends State<Home> {
         home: Material(
             child: Scaffold(
                 body: DefaultTabController(
-                    length: 2,
+                    length: 3,
                     child: Builder(builder: (BuildContext innerContext) {
                       var tabChanger = (CaseRecord selectRecord) {
                         modifySelectedRecord(selectRecord);

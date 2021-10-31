@@ -217,15 +217,23 @@ class SheetController {
     var sheetName = _getSheetNameByDate(request['filterDate']);
     String query =
         '=QUERY(${sheetName}!A2:F; "select A, B, C, D, E, F where E = date\'${request['filterDate']}\'")';
+    return await fetchDataByQuery(request, query);
+  }
+
+  Future<List<CaseRecord>> fetchDataByQuery(request, String query) async {
+    await initializeTempSheet(request, query);
+    List<List<Object>> response = await _fetchTempSheetData(request['sheetId']);
+    log.info("Fetched records ${response}");
+    return _toCaseRecords(response);
+  }
+
+  Future<void> initializeTempSheet(request, String query) async {
     try {
       await _addTempSheet(request['sheetId'], query);
     } catch (error) {
       log.info("Sheet already exists", error);
       await _updateTempSheet(request['sheetId'], query);
     }
-    List<List<Object>> response = await _fetchTempSheetData(request['sheetId']);
-    log.info("Fetched records ${response}");
-    return _toCaseRecords(response);
   }
 
   int generateRecordId() {
@@ -253,14 +261,19 @@ class SheetController {
       request, sheetName) async {
     String query =
         '=QUERY(${sheetName}!A2:F; "select A, B, C, D, E, F where A = \'${request['clientName']}\'")';
-    try {
-      await _addTempSheet(request['sheetId'], query);
-    } catch (error) {
-      log.info("Sheet already exists", error);
-      await _updateTempSheet(request['sheetId'], query);
-    }
-    var response = await _fetchTempSheetData(request['sheetId']);
-    log.info("Fetched records from sheet:${sheetName} =>  ${response}");
-    return _toCaseRecords(response);
+    return await fetchDataByQuery(request, query);
+  }
+
+  //=QUERY('2021'!A2:F, "select count(E), E  where E > date'2021-10-01' and E<= date '2021-10-31' group by E")
+  Future<List<List<Object>>> countForMonth(dynamic request) async {
+    log.info("fetching count for ${request}");
+    DateTime monthAndYear = request['monthAndYear'];
+    var startDate = "${new DateTime(monthAndYear.year, monthAndYear.month, 1).toLocal()}".split(' ')[0];
+    var endDate = "${new DateTime(monthAndYear.year, monthAndYear.month+1, 0).toLocal()}".split(' ')[0];
+    String query = '=QUERY(${monthAndYear.year}!A2:F, "select count(E), E  where E >= date\'${startDate}\' and E<= date \'${endDate}\' group by E")';
+    await initializeTempSheet(request, query);
+    List<List<Object>> response = await _fetchTempSheetData(request['sheetId']);
+    log.info("Fetched records ${response}");
+    return response;
   }
 }

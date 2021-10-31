@@ -1,4 +1,5 @@
 import 'package:case_records/controller/create_sheet_controller.dart';
+import 'package:case_records/model/cal_data_source.dart';
 import 'package:google_sign_in/google_sign_in.dart';
 import 'package:logging/logging.dart';
 import '../model/case_record.dart';
@@ -54,5 +55,18 @@ class FormController {
     } catch (e, stacktrace) {
       log.severe("FormController:fetchRecords ${e}", stacktrace);
     }
+  }
+
+  void fetchDaysOverview(DateTime monthAndYear, void Function(List<DayOverview> response) callBack) async {
+    SheetController controller = await SheetControllerSingletonExtension.instance(googleSignInAccount);
+    Map<Object, Object> request = {'sheetId': SHEET_ID, 'monthAndYear': monthAndYear};
+    
+    controller.countForMonth(request).then(this._toDaysOverview).then(callBack).catchError((error) => log.severe("FormController:fetchRecords ${error}"));
+  }
+
+  List<DayOverview> _toDaysOverview(List<List<Object>> res){
+    log.finest(res);
+    return res.where((entry) => entry.length> 1 && entry[1].toString().isNotEmpty)
+        .map(DayOverview.from).toList();
   }
 }
