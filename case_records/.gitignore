@@ -57,5 +57,5 @@ neutralino.js
 
 # Neutralinojs related files
 .storage
-*.log
 **/**/google-services.json
+lib/view/g_c_id.dart

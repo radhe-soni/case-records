@@ -1,35 +1,11 @@
-import 'dart:developer';
-
 import 'package:case_records/google/GoogleAuthClient.dart';
 import 'package:case_records/model/case_record.dart';
-import 'package:case_records/view/case_records_view.dart';
-import 'package:google_sign_in/google_sign_in.dart';
-import 'package:http/http.dart' as http;
+import 'package:case_records/view/sign_in.dart';
 import 'package:googleapis/drive/v3.dart' as drive;
 import 'package:googleapis/sheets/v4.dart' as spreadSheet;
 import 'package:logging/logging.dart';
 
-// void createSheet(String appScriptURL,GoogleSignInAccount googleSignInAccount, void Function(String) callback) async {
-//   try {
-//     var authHeaders = await googleSignInAccount.authHeaders;
-//     print("Create Sheet ${authHeaders}");
-//     await http.post(Uri.parse(appScriptURL+'?action=createSheet'),
-//       headers: await googleSignInAccount.authHeaders,).then((response) async {
-//       if (response.statusCode == 302) {
-//         String url = response.headers['location']!;
-//         await http.get(Uri.parse(url)).then((response) {
-//           callback(response.body);
-//         });
-//       } else {
-//         callback('###ERROR###');
-//         print(response.body);
-//       }
-//     });
-//   } catch (e) {
-//     print("Create Sheet: ${e}");
-//   }
-// }
-const SHEET_NAME = 'CASE_RECORD';
+const SPREADSHEET_NAME = 'CASE_RECORD';
 const APP_ROOT_FOLDER = 'case_record';
 enum COLUMN_NAMES {
   clientName,
@@ -57,7 +33,9 @@ extension SheetControllerSingletonExtension on SheetController {
   static SheetController? controller;
 
   static Future<SheetController> instance(googleSignInAccount) async {
-    if (controller == null) {
+    Map<String, String>? authHeaders =
+        await verifyAuthentication(googleSignInAccount);
+    if (controller == null || authHeaders == null) {
       final authHeaders = await googleSignInAccount.authHeaders;
       final authenticateClient = GoogleAuthClient(authHeaders);
       SheetController newInstance = new SheetController(authenticateClient);
@@ -90,40 +68,52 @@ class SheetController {
     log.info("_createSheet: creating new sheet");
     String id = '';
     try {
-      drive.FileList fileList = await driveApi.files.list(
-          q: "mimeType='application/vnd.google-apps.spreadsheet' and name='${SHEET_NAME}'");
-      drive.File spreadSheetFile = fileList.files!.first;
-      id = spreadSheetFile.id!;
+      id = await findSheet(id);
     } catch (err) {
-      log.warning("Spreadsheet not present creating new one", err);
-      spreadSheet.Spreadsheet newSS = new spreadSheet.Spreadsheet();
-      newSS = await sheetsApi.spreadsheets.create(newSS);
-      id = newSS.spreadsheetId!;
-      drive.File request = new drive.File();
-      request.mimeType = 'application/vnd.google-apps.spreadsheet';
-      request.parents = ["root"];
-      request.name = SHEET_NAME;
-      drive.File spreadSheetFile = await driveApi.files.copy(request, id);
-      // spreadSheetFile = await driveApi.files.create(request);
-      log.info("sheet file id " + id);
-      log.info("drive file id " + spreadSheetFile.id!);
-      driveApi.files.delete(id);
-      id = spreadSheetFile.id!;
-      Map<Object, Object> record = {'sheetId': id};
-      COLUMN_NAMES.values.forEach((COLUMN_NAMES element) {
-        record[element] = COLUMN_NAMES_Extenstion.name[element]!;
-      });
-      addRecord(record);
+      id = await createNewSpreadSheet(err, id);
     }
     log.info("_createSheet: Calling call back function, id: ${id}");
     callBack(id);
   }
 
+  _getCurrentSheetName() {
+    return DateTime.now().year.toString();
+  }
+
+  Future<String> createNewSpreadSheet(Object err, String id) async {
+    log.warning("Spreadsheet not present creating new one", err);
+    spreadSheet.Spreadsheet newSS = new spreadSheet.Spreadsheet();
+    newSS = await sheetsApi.spreadsheets.create(newSS);
+    id = newSS.spreadsheetId!;
+    drive.File request = new drive.File();
+    request.mimeType = 'application/vnd.google-apps.spreadsheet';
+    request.parents = ["root"];
+    request.name = SPREADSHEET_NAME;
+    drive.File spreadSheetFile = await driveApi.files.copy(request, id);
+    // spreadSheetFile = await driveApi.files.create(request);
+    log.info("sheet file id " + id);
+    log.info("drive file id " + spreadSheetFile.id!);
+    driveApi.files.delete(id);
+    id = spreadSheetFile.id!;
+    await addSheet(_getCurrentSheetName(), id);
+    Map<Object, Object> record = {'sheetId': id};
+    COLUMN_NAMES.values.forEach((COLUMN_NAMES element) {
+      record[element] = COLUMN_NAMES_Extenstion.name[element]!;
+    });
+    addRecord(record);
+    return id;
+  }
+
+  Future<String> findSheet(String id) async {
+    drive.FileList fileList = await driveApi.files.list(
+        q: "mimeType='application/vnd.google-apps.spreadsheet' and name='${SPREADSHEET_NAME}'");
+    drive.File spreadSheetFile = fileList.files!.first;
+    id = spreadSheetFile.id!;
+    return id;
+  }
+
   Future<void> addRecord(record) async {
     try {
-      print(record);
-      spreadSheet.Spreadsheet sheet =
-          await sheetsApi.spreadsheets.get(record['sheetId']);
       var recordToSend = [
         record[COLUMN_NAMES.clientName],
         record[COLUMN_NAMES.caseDescription],
@@ -135,13 +125,14 @@ class SheetController {
             ? record[COLUMN_NAMES.id]
             : DateTime.now().millisecondsSinceEpoch
       ];
-      log.info('sheet id: ${sheet.spreadsheetId} record_id: ${recordToSend}');
+      log.info('sheet id: ${record['sheetId']} record_id: ${recordToSend}');
       spreadSheet.ValueRange request = new spreadSheet.ValueRange.fromJson({
         "values": [recordToSend],
-        "range": 'A:G',
         "majorDimension": "ROWS"
       });
-      sheetsApi.spreadsheets.values.append(request, sheet.spreadsheetId!, 'A:G',
+      var sheetName = _getCurrentSheetName();
+      sheetsApi.spreadsheets.values.append(
+          request, record['sheetId'], '${sheetName}!A:G',
           valueInputOption: 'USER_ENTERED');
     } catch (exc, stacktrace) {
       log.severe("addRecord: ", exc, stacktrace);
@@ -151,36 +142,34 @@ class SheetController {
     }
   }
 
-  Future<void> _addTempSheet(sheetId, filterDate) async {
-    var addSheetRequest = new spreadSheet.AddSheetRequest(
-        properties: new spreadSheet.SheetProperties(title: 'temp'));
-    spreadSheet.BatchUpdateSpreadsheetRequest updateSheet =
-        new spreadSheet.BatchUpdateSpreadsheetRequest(
-            includeSpreadsheetInResponse: true,
-            requests: [new spreadSheet.Request(addSheet: addSheetRequest)]);
-    spreadSheet.BatchUpdateSpreadsheetResponse batchUpdate =
-        await sheetsApi.spreadsheets.batchUpdate(updateSheet, sheetId);
-    spreadSheet.ValueRange request = createTempSheetDataRequest(filterDate);
+  Future<void> _addTempSheet(sheetId, query) async {
+    await addSheet('temp', sheetId);
+
+    spreadSheet.ValueRange request = createTempSheetDataRequest(query);
     sheetsApi.spreadsheets.values.append(request, sheetId, 'temp!A1:A1',
         valueInputOption: 'USER_ENTERED');
     log.info("added new temp sheet");
   }
 
-  spreadSheet.ValueRange createTempSheetDataRequest(filterDate) {
-    spreadSheet.ValueRange request = new spreadSheet.ValueRange.fromJson({
-      "values": [
-        [
-          '=QUERY(2021!A2:F; "select A, B, C, D, E, F where E = date\'${filterDate}\'")'
-        ]
-      ],
-      "range": 'temp!A1:A1',
-      "majorDimension": "ROWS"
-    });
+  Future<void> addSheet(String sheetName, sheetId) async {
+    var addSheetRequest = new spreadSheet.AddSheetRequest(
+        properties: new spreadSheet.SheetProperties(title: sheetName));
+    spreadSheet.BatchUpdateSpreadsheetRequest updateSheet =
+        new spreadSheet.BatchUpdateSpreadsheetRequest(
+            includeSpreadsheetInResponse: true,
+            requests: [new spreadSheet.Request(addSheet: addSheetRequest)]);
+    await sheetsApi.spreadsheets.batchUpdate(updateSheet, sheetId);
+  }
+
+  spreadSheet.ValueRange createTempSheetDataRequest(query) {
+    spreadSheet.ValueRange request = new spreadSheet.ValueRange(values: [
+      [query]
+    ], range: 'temp!A1:A1', majorDimension: "ROWS");
     return request;
   }
 
-  Future<void> _updateTempSheet(sheetId, filterDate) async {
-    spreadSheet.ValueRange request = createTempSheetDataRequest(filterDate);
+  Future<void> _updateTempSheet(sheetId, query) async {
+    spreadSheet.ValueRange request = createTempSheetDataRequest(query);
     await sheetsApi.spreadsheets.values.update(request, sheetId, 'temp!A1:A1',
         valueInputOption: 'USER_ENTERED');
     log.info("updated temp sheet");
@@ -207,30 +196,35 @@ class SheetController {
             .expand((vRange) => vRange.values!)
             .toList());
   }
+
   CaseRecord _toCaseRecord(row) {
+    String remark = row.length > 5 ? row[COLUMN_NAMES.remark.index] : 'N/A';
     return new CaseRecord(
         row[COLUMN_NAMES.clientName.index],
         row[COLUMN_NAMES.caseDescription.index],
         row[COLUMN_NAMES.filingDate.index],
         row[COLUMN_NAMES.previousHearingDate.index],
         row[COLUMN_NAMES.nextHearingDate.index],
-        row[COLUMN_NAMES.remark.index]);
+        remark: remark);
   }
 
   List<CaseRecord> _toCaseRecords(List<List<Object>> response) {
     return response
-        .where((row) =>  row.length>1)
+        .where((row) => row.length > 1)
         .map((row) => row.map((ele) => ele.toString()).toList())
-        .map((row) => _toCaseRecord(row)).toList();
+        .map((row) => _toCaseRecord(row))
+        .toList();
   }
 
   Future<List<CaseRecord>> fetchRecords(request) async {
     log.info("Fetching records for ${request}");
+    String query =
+        '=QUERY(2021!A2:F; "select A, B, C, D, E, F where E = date\'${request['filterDate']}\'")';
     try {
-      await _addTempSheet(request['sheetId'], request['filterDate']);
+      await _addTempSheet(request['sheetId'], query);
     } catch (error) {
       log.info("Sheet already exists", error);
-      await _updateTempSheet(request['sheetId'], request['filterDate']);
+      await _updateTempSheet(request['sheetId'], query);
     }
     List<List<Object>> response = await _fetchTempSheetData(request['sheetId']);
     log.info("Fetched records ${response}");
@@ -239,5 +233,20 @@ class SheetController {
 
   int generateRecordId() {
     return new DateTime.now().millisecond;
+  }
+
+  Future<List<CaseRecord>> fetchRecordsByName(request) async {
+    log.info("Fetching records for ${request}");
+    String query =
+        '=QUERY(2021!A2:F; "select A, B, C, D, E, F where A = \'${request['clientName']}\'")';
+    try {
+      await _addTempSheet(request['sheetId'], query);
+    } catch (error) {
+      log.info("Sheet already exists", error);
+      await _updateTempSheet(request['sheetId'], query);
+    }
+    List<List<Object>> response = await _fetchTempSheetData(request['sheetId']);
+    log.info("Fetched records ${response}");
+    return _toCaseRecords(response);
   }
 }

@@ -1,7 +1,5 @@
-import 'dart:convert' as convert;
 import 'package:case_records/controller/create_sheet_controller.dart';
 import 'package:google_sign_in/google_sign_in.dart';
-import 'package:http/http.dart' as http;
 import 'package:logging/logging.dart';
 import '../model/case_record.dart';
 
@@ -45,5 +43,16 @@ class FormController {
 
   void createBackup(void Function(List<dynamic>) callback) async{
 
+  }
+
+  void fetchRecordsByName(String clientName, void Function(List<CaseRecord>) callback)  async{
+    SheetController controller = await SheetControllerSingletonExtension.instance(googleSignInAccount);
+    Map<Object, Object> request = {'sheetId': SHEET_ID, 'clientName': clientName};
+    try {
+      List<CaseRecord> caseRecords = await controller.fetchRecordsByName(request);
+      callback(caseRecords);
+    } catch (e, stacktrace) {
+      log.severe("FormController:fetchRecords ${e}", stacktrace);
+    }
   }
 }

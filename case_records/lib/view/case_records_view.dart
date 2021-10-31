@@ -1,7 +1,7 @@
-import 'dart:async';
 import 'package:case_records/controller/form_controller.dart';
 import 'package:case_records/model/case_record.dart';
 import 'package:case_records/service/form_controller_factory.dart';
+import 'package:case_records/view/form_constants.dart';
 import 'package:flutter/material.dart';
 import 'package:google_sign_in/google_sign_in.dart';
 
@@ -18,10 +18,11 @@ class CaseRecords extends StatefulWidget {
 }
 
 class _CaseRecordsState extends State<CaseRecords> with RestorationMixin {
-  final _formKey = GlobalKey<FormState>();
 
   late RestorableRouteFuture<DateTime> nextHearingDatePicker;
   final TextEditingController _selectedDateController =
+      new TextEditingController();
+  final TextEditingController _clientNameController =
       new TextEditingController();
 
   static Route<DateTime> _datePickerRoute(
@@ -66,7 +67,6 @@ class _CaseRecordsState extends State<CaseRecords> with RestorationMixin {
       tableRows = [];
     });
     if (selectedDate != null) {
-      List<CaseRecord> caseRecords = [];
       String filterDate = "${selectedDate.toLocal()}".split(' ')[0];
       setState(() {
         _selectedDateController.text = filterDate;
@@ -74,32 +74,35 @@ class _CaseRecordsState extends State<CaseRecords> with RestorationMixin {
       FormControllerSingletonExtension.getInstance(widget.googleSignInAccount)
           .then((FormController formController) {
         formController.fetchRecords(filterDate, (List<CaseRecord> response) {
-          caseRecords.addAll(response);
-          List<TableRow> trs = [];
-          if (caseRecords.isNotEmpty) {
-            trs = [tableHeader()];
-            trs.addAll(caseRecords
-                .asMap()
-                .entries
-                .map((entry) => tableRowFromCaseRecord(entry.key, entry.value))
-                .toList());
-          } else {
-            trs = [
-              TableRow(children: <Widget>[
-                TableCell(
-                  child:
-                      Text("No Records Found!!!", textAlign: TextAlign.center),
-                )
-              ])
-            ];
-          }
-
-          setState(() {
-            tableRows = trs;
-          });
+          fillRecordsInTable(response);
         });
       });
     }
+  }
+
+  void fillRecordsInTable(List<CaseRecord> caseRecords) {
+    List<TableRow> trs = [];
+    if (caseRecords.isNotEmpty) {
+      trs = [tableHeader()];
+      trs.addAll(caseRecords
+          .asMap()
+          .entries
+          .map((entry) => tableRowFromCaseRecord(entry.key, entry.value))
+          .toList());
+    } else {
+      trs = [
+        TableRow(children: <Widget>[
+          TableCell(
+            child:
+                Text("No Records Found!!!", textAlign: TextAlign.center),
+          )
+        ])
+      ];
+    }
+
+    setState(() {
+      tableRows = trs;
+    });
   }
 
   TableRow tableHeader() {
@@ -137,42 +140,44 @@ class _CaseRecordsState extends State<CaseRecords> with RestorationMixin {
     );
   }
 
+  static const PADDING_CELL = 1.0;
+
   TableRow tableRowFromCaseRecord(int index, CaseRecord caseRecord) {
     return TableRow(
       children: <Widget>[
         TableCell(
           child: Padding(
-              padding: const EdgeInsets.all(8.0),
+              padding: const EdgeInsets.all(PADDING_CELL),
               child: Text((index + 1).toString())),
         ),
         TableCell(
           child: Padding(
-              padding: const EdgeInsets.all(8.0),
+              padding: const EdgeInsets.all(PADDING_CELL),
               child: Text(caseRecord.clientName)),
         ),
         TableCell(
           child: Padding(
-              padding: const EdgeInsets.all(8.0),
+              padding: const EdgeInsets.all(PADDING_CELL),
               child: Text(caseRecord.caseDescription)),
         ),
         TableCell(
           child: Padding(
-              padding: const EdgeInsets.all(8.0),
+              padding: const EdgeInsets.all(PADDING_CELL),
               child: Text(caseRecord.filingDate.split('T')[0])),
         ),
         TableCell(
           child: Padding(
-              padding: const EdgeInsets.all(8.0),
+              padding: const EdgeInsets.all(PADDING_CELL),
               child: Text(caseRecord.previousHearingDate.split('T')[0])),
         ),
         TableCell(
             child: Padding(
-          padding: const EdgeInsets.all(8.0),
+          padding: const EdgeInsets.all(PADDING_CELL),
           child: Text(caseRecord.remark),
         )),
         TableCell(
           child: Padding(
-            padding: const EdgeInsets.symmetric(vertical: 16.0),
+            padding: const EdgeInsets.symmetric(vertical: PADDING_CELL),
             child: TextButton(
               onPressed: () {
                 widget.onChange(caseRecord);
@@ -193,45 +198,89 @@ class _CaseRecordsState extends State<CaseRecords> with RestorationMixin {
     );
   }
 
+  _table() {
+    return Container(
+      width: 600.0,
+      margin: EdgeInsets.all(5),
+      child: Table(
+        columnWidths: {
+          0: FlexColumnWidth(1),
+          1: FlexColumnWidth(3),
+          2: FlexColumnWidth(6),
+          3: FlexColumnWidth(3),
+          4: FlexColumnWidth(3),
+          5: FlexColumnWidth(7),
+          6: FlexColumnWidth(2),
+        },
+        border: TableBorder.all(),
+        defaultVerticalAlignment: TableCellVerticalAlignment.middle,
+        children: tableRows,
+      ),
+    );
+  }
+
+  bool isNameSearch = false;
+
   @override
   Widget build(BuildContext context) {
     return SingleChildScrollView(
         scrollDirection: Axis.vertical,
-        child: Container(
-            child: Column(
+        child: Column(
           children: <Widget>[
-            TextField(readOnly: true, controller: _selectedDateController),
+            SwitchListTile(
+                title: isNameSearch? const Text('Name Search') : const Text('Date Search'),
+                value: isNameSearch,
+                onChanged: (check) {
+                  setState(() {
+                    isNameSearch = check;
+                  });
+                }),
+            TextField(
+                decoration: isNameSearch
+                ? createInputDecoration("Client Name")
+                : createInputDecoration("Filing Date"),
+                controller: isNameSearch
+                    ? _clientNameController
+                    : _selectedDateController),
             Center(
                 child: Column(
                     mainAxisAlignment: MainAxisAlignment.center,
                     children: <Widget>[
-                  Container(
-                    margin: EdgeInsets.all(10),
-                    child: Table(
-                      columnWidths: {
-                        0: FlexColumnWidth(1),
-                        1: FlexColumnWidth(3),
-                        2: FlexColumnWidth(6),
-                        3: FlexColumnWidth(3),
-                        4: FlexColumnWidth(3),
-                        5: FlexColumnWidth(7),
-                        6: FlexColumnWidth(2),
-                      },
-                      border: TableBorder.all(),
-                      defaultVerticalAlignment:
-                          TableCellVerticalAlignment.middle,
-                      children: tableRows,
-                    ),
-                  ),
+                  _table(),
                 ])),
-            FloatingActionButton.extended(
+            TextButton(
               onPressed: () {
-                nextHearingDatePicker.present();
+                if (isNameSearch)
+                  _fetchCaseRecordsByName();
+                  else
+                    nextHearingDatePicker.present();
               },
-              icon: Icon(Icons.download),
-              label: Text("Fetch Records"),
+              child: Text("Fetch Records"),
+              style: TextButton.styleFrom(
+                  padding: const EdgeInsets.all(16.0),
+                  primary: Colors.white,
+                  textStyle: const TextStyle(fontSize: 20),
+                  backgroundColor:
+                      Theme.of(context).colorScheme.primary.withOpacity(0.8)),
+              // icon: Icon(Icons.download),
             ),
           ],
-        )));
+        ));
+  }
+
+  void _fetchCaseRecordsByName() {
+    setState(() {
+      tableRows = [];
+    });
+    String clientName = _clientNameController.text;
+    if (clientName.isNotEmpty) {
+
+      FormControllerSingletonExtension.getInstance(widget.googleSignInAccount)
+          .then((FormController formController) {
+        formController.fetchRecordsByName(clientName, (List<CaseRecord> response) {
+          fillRecordsInTable(response);
+        });
+      });
+    }
   }
 }

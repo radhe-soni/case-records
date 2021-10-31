@@ -3,9 +3,10 @@ import 'package:flutter/material.dart';
 import 'package:google_sign_in/google_sign_in.dart';
 import 'dart:convert' as convert;
 import 'package:http/http.dart' as http;
+import 'package:case_records/view/g_c_id.dart' as g_c_id;
 
 GoogleSignIn _googleSignIn = GoogleSignIn(
-  clientId: '1031314862792-d43igo7ng03v4o8pocs2bo07a0omlrql.apps.googleusercontent.com',
+  clientId: g_c_id.clientId,
   scopes: [
     'https://www.googleapis.com/auth/drive.file',
     'https://www.googleapis.com/auth/drive.appdata',
@@ -13,9 +14,24 @@ GoogleSignIn _googleSignIn = GoogleSignIn(
   ],
 );
 
+refreshToken() async {
+  print("Token Refresh");
+  final GoogleSignInAccount? googleSignInAccount =
+      await _googleSignIn.signInSilently();
+      await googleSignInAccount!.authentication;
+  }
+
+Future<Map<String, String>?> verifyAuthentication(googleSignInAccount) async {
+  Map<String, String>? authHeaders;
+  try {
+    authHeaders = await googleSignInAccount.authHeaders;
+  } catch (exe) {
+    refreshToken();
+  }
+  return authHeaders;
+}
 
 class SignInDemo extends StatefulWidget {
-
   final Function(GoogleSignInAccount?) signInCallBack;
 
   const SignInDemo({Key? key, required this.signInCallBack}) : super(key: key);
@@ -28,10 +44,13 @@ class SignInDemoState extends State<SignInDemo> {
   GoogleSignInAccount? _currentUser;
   String _contactText = '';
 
-
   @override
   void initState() {
     super.initState();
+    _doSignIn();
+  }
+
+  _doSignIn() {
     _googleSignIn.onCurrentUserChanged.listen((GoogleSignInAccount? account) {
       setState(() {
         _currentUser = account;
@@ -72,12 +91,12 @@ class SignInDemoState extends State<SignInDemo> {
   String? _pickFirstNamedContact(Map<String, dynamic> data) {
     final List<dynamic>? connections = data['connections'];
     final Map<String, dynamic>? contact = connections?.firstWhere(
-          (dynamic contact) => contact['names'] != null,
+      (dynamic contact) => contact['names'] != null,
       orElse: () => null,
     );
     if (contact != null) {
       final Map<String, dynamic>? name = contact['names'].firstWhere(
-            (dynamic name) => name['displayName'] != null,
+        (dynamic name) => name['displayName'] != null,
         orElse: () => null,
       );
       if (name != null) {

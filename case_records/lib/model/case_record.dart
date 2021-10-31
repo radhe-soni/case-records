@@ -9,7 +9,7 @@ class CaseRecord {
   final String remark;
 
   CaseRecord(this.clientName, this.caseDescription, this.filingDate,
-      this.previousHearingDate, this.nextHearingDate, this.remark);
+      this.previousHearingDate, this.nextHearingDate, {this.remark = 'N/A'});
 
   factory CaseRecord.fromJson(dynamic json) {
     return CaseRecord(
@@ -18,12 +18,12 @@ class CaseRecord {
         "${json['filingDate']}",
         "${json['previousHearingDate']}",
         "${json['nextHearingDate']}",
-        "${json['remark']}");
+        remark: "${json['remark']}");
   }
 
   factory CaseRecord.defaultRecord() {
     String defaultDate = "${DateTime.now().toLocal()}".split(' ')[0];
-    return CaseRecord("", "", defaultDate, defaultDate, defaultDate, "");
+    return CaseRecord("", "", defaultDate, defaultDate, defaultDate, remark: "N/A");
   }
 
   // Method to make GET parameters.
@@ -38,31 +38,31 @@ class CaseRecord {
 
   CaseRecord withFilingDate(String newValue) {
     return CaseRecord(this.clientName, this.caseDescription, newValue,
-        this.previousHearingDate, this.nextHearingDate, this.remark);
+        this.previousHearingDate, this.nextHearingDate, remark: this.remark);
   }
 
   CaseRecord withPreviousHearingDate(String newValue) {
     return CaseRecord(this.clientName, this.caseDescription, this.filingDate,
-        newValue, this.nextHearingDate, this.remark);
+        newValue, this.nextHearingDate, remark: this.remark);
   }
 
   CaseRecord withNextHearingDate(String newValue) {
     return CaseRecord(this.clientName, this.caseDescription, this.filingDate,
-        this.previousHearingDate, newValue, this.remark);
+        this.previousHearingDate, newValue, remark: this.remark);
   }
 
   CaseRecord withClientName(String newValue) {
     return CaseRecord(newValue, this.caseDescription, this.filingDate,
-        this.previousHearingDate, this.nextHearingDate, this.remark);
+        this.previousHearingDate, this.nextHearingDate, remark: this.remark);
   }
 
   CaseRecord withCaseDescription(String newValue) {
     return CaseRecord(this.clientName, newValue, this.filingDate,
-        this.previousHearingDate, this.nextHearingDate, this.remark);
+        this.previousHearingDate, this.nextHearingDate, remark: this.remark);
   }
 
   CaseRecord withRemark(String newValue) {
     return CaseRecord(this.clientName, this.caseDescription, this.filingDate,
-        this.previousHearingDate, this.nextHearingDate, newValue);
+        this.previousHearingDate, this.nextHearingDate, remark: newValue);
   }
 }

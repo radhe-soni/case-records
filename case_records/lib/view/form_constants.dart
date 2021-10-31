@@ -1,4 +1,3 @@
-import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 
 final Color PRIMARY_COLOR = Colors.lightGreen[900]!;

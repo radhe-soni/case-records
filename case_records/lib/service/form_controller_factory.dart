@@ -3,6 +3,7 @@ import 'dart:convert' as convert;
 import 'package:case_records/controller/form_controller.dart';
 import 'package:case_records/service/storage_service.dart';
 import 'package:case_records/service/web_storage_dummy.dart' if(dart.library.html) 'package:case_records/service/webstorage.dart' as webstorage;
+import 'package:case_records/view/sign_in.dart';
 import 'package:flutter/foundation.dart';
 import 'package:google_sign_in/google_sign_in.dart';
 
@@ -13,8 +14,10 @@ extension FormControllerSingletonExtension on FormControllerSingleton{
   static final AbstractStorage storage = createStorageObject();
 
   static FormController? _formControllerCached;
-  static Future<FormController> getInstance(GoogleSignInAccount googleSignInAccount) {
-    if(_formControllerCached != null)
+  static Future<FormController> getInstance(GoogleSignInAccount googleSignInAccount) async{
+    Map<String, String>? authHeaders = await verifyAuthentication(googleSignInAccount);
+
+    if(_formControllerCached != null && authHeaders != null)
       return SynchronousFuture(_formControllerCached!);
     print('Creating formcontroller instance');
     return storage.readData().then((String dbData){
