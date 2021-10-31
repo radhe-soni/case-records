@@ -18,17 +18,16 @@ refreshToken() async {
   print("Token Refresh");
   final GoogleSignInAccount? googleSignInAccount =
       await _googleSignIn.signInSilently();
-      await googleSignInAccount!.authentication;
-  }
+  await googleSignInAccount!.authentication;
+}
 
-Future<Map<String, String>?> verifyAuthentication(googleSignInAccount) async {
-  Map<String, String>? authHeaders;
+ verifyAuthentication() async {
   try {
-    authHeaders = await googleSignInAccount.authHeaders;
+    print("verifying authentication");
+    await _googleSignIn.signInSilently();
   } catch (exe) {
-    refreshToken();
+    throw exe;
   }
-  return authHeaders;
 }
 
 class SignInDemo extends StatefulWidget {
@@ -50,14 +49,14 @@ class SignInDemoState extends State<SignInDemo> {
     _doSignIn();
   }
 
-  _doSignIn() {
+  _doSignIn() async {
     _googleSignIn.onCurrentUserChanged.listen((GoogleSignInAccount? account) {
       setState(() {
         _currentUser = account;
       });
       widget.signInCallBack(_currentUser);
     });
-    _googleSignIn.signInSilently();
+    await _googleSignIn.signInSilently();
   }
 
   Future<void> _handleGetContact(GoogleSignInAccount user) async {

@@ -71,7 +71,7 @@ class _CaseRecordsState extends State<CaseRecords> with RestorationMixin {
       setState(() {
         _selectedDateController.text = filterDate;
       });
-      FormControllerSingletonExtension.getInstance(widget.googleSignInAccount)
+      FormControllerFactory.FACTORY.getInstance(widget.googleSignInAccount)
           .then((FormController formController) {
         formController.fetchRecords(filterDate, (List<CaseRecord> response) {
           fillRecordsInTable(response);
@@ -201,15 +201,15 @@ class _CaseRecordsState extends State<CaseRecords> with RestorationMixin {
   _table() {
     return Container(
       width: 600.0,
-      margin: EdgeInsets.all(5),
+      margin: EdgeInsets.all(10),
       child: Table(
         columnWidths: {
           0: FlexColumnWidth(1),
           1: FlexColumnWidth(3),
           2: FlexColumnWidth(6),
-          3: FlexColumnWidth(3),
-          4: FlexColumnWidth(3),
-          5: FlexColumnWidth(7),
+          3: FlexColumnWidth(4),
+          4: FlexColumnWidth(4),
+          5: FlexColumnWidth(5),
           6: FlexColumnWidth(2),
         },
         border: TableBorder.all(),
@@ -223,6 +223,8 @@ class _CaseRecordsState extends State<CaseRecords> with RestorationMixin {
 
   @override
   Widget build(BuildContext context) {
+    FocusNode nameNode = new FocusNode();
+
     return SingleChildScrollView(
         scrollDirection: Axis.vertical,
         child: Column(
@@ -233,12 +235,16 @@ class _CaseRecordsState extends State<CaseRecords> with RestorationMixin {
                 onChanged: (check) {
                   setState(() {
                     isNameSearch = check;
+                    if(check){
+                      FocusScope.of(context).requestFocus(nameNode);
+                    }
                   });
                 }),
             TextField(
+                focusNode: nameNode,
                 decoration: isNameSearch
-                ? createInputDecoration("Client Name")
-                : createInputDecoration("Filing Date"),
+                ? createLeadingTextInputDecoration("Client Name")
+                : createLeadingTextInputDecoration("Filing Date"),
                 controller: isNameSearch
                     ? _clientNameController
                     : _selectedDateController),
@@ -275,7 +281,7 @@ class _CaseRecordsState extends State<CaseRecords> with RestorationMixin {
     String clientName = _clientNameController.text;
     if (clientName.isNotEmpty) {
 
-      FormControllerSingletonExtension.getInstance(widget.googleSignInAccount)
+      FormControllerFactory.FACTORY.getInstance(widget.googleSignInAccount)
           .then((FormController formController) {
         formController.fetchRecordsByName(clientName, (List<CaseRecord> response) {
           fillRecordsInTable(response);

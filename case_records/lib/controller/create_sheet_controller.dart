@@ -1,6 +1,5 @@
 import 'package:case_records/google/GoogleAuthClient.dart';
 import 'package:case_records/model/case_record.dart';
-import 'package:case_records/view/sign_in.dart';
 import 'package:googleapis/drive/v3.dart' as drive;
 import 'package:googleapis/sheets/v4.dart' as spreadSheet;
 import 'package:logging/logging.dart';
@@ -30,18 +29,11 @@ extension COLUMN_NAMES_Extenstion on COLUMN_NAMES {
 }
 
 extension SheetControllerSingletonExtension on SheetController {
-  static SheetController? controller;
-
   static Future<SheetController> instance(googleSignInAccount) async {
-    Map<String, String>? authHeaders =
-        await verifyAuthentication(googleSignInAccount);
-    if (controller == null || authHeaders == null) {
-      final authHeaders = await googleSignInAccount.authHeaders;
-      final authenticateClient = GoogleAuthClient(authHeaders);
-      SheetController newInstance = new SheetController(authenticateClient);
-      controller = newInstance;
-    }
-    return controller!;
+    print("Creating new controller instance");
+    final authHeaders = await googleSignInAccount.authHeaders;
+    final authenticateClient = GoogleAuthClient(authHeaders);
+    return new SheetController(authenticateClient);
   }
 }
 
@@ -216,10 +208,15 @@ class SheetController {
         .toList();
   }
 
+  _getSheetNameByDate(String filterDate) {
+    return filterDate.substring(0, 4);
+  }
+
   Future<List<CaseRecord>> fetchRecords(request) async {
     log.info("Fetching records for ${request}");
+    var sheetName = _getSheetNameByDate(request['filterDate']);
     String query =
-        '=QUERY(2021!A2:F; "select A, B, C, D, E, F where E = date\'${request['filterDate']}\'")';
+        '=QUERY(${sheetName}!A2:F; "select A, B, C, D, E, F where E = date\'${request['filterDate']}\'")';
     try {
       await _addTempSheet(request['sheetId'], query);
     } catch (error) {
@@ -237,16 +234,33 @@ class SheetController {
 
   Future<List<CaseRecord>> fetchRecordsByName(request) async {
     log.info("Fetching records for ${request}");
+    spreadSheet.Spreadsheet sheet =
+        await sheetsApi.spreadsheets.get(request['sheetId']);
+    List<CaseRecord> records = [];
+    if (sheet.sheets != null && sheet.sheets!.isNotEmpty) {
+      List<Future<List<CaseRecord>>> futureResponses = sheet.sheets!
+          .map((sheet) => sheet.properties!.title!)
+          .where((name) => name != 'temp')
+          .map((sheetName) => _fetchRecordBySheetAndByName(request, sheetName))
+          .toList();
+      List<List<CaseRecord>> responses = await Future.wait(futureResponses);
+      records = responses.expand((element) => element).toList();
+    }
+    return records;
+  }
+
+  Future<List<CaseRecord>> _fetchRecordBySheetAndByName(
+      request, sheetName) async {
     String query =
-        '=QUERY(2021!A2:F; "select A, B, C, D, E, F where A = \'${request['clientName']}\'")';
+        '=QUERY(${sheetName}!A2:F; "select A, B, C, D, E, F where A = \'${request['clientName']}\'")';
     try {
       await _addTempSheet(request['sheetId'], query);
     } catch (error) {
       log.info("Sheet already exists", error);
       await _updateTempSheet(request['sheetId'], query);
     }
-    List<List<Object>> response = await _fetchTempSheetData(request['sheetId']);
-    log.info("Fetched records ${response}");
+    var response = await _fetchTempSheetData(request['sheetId']);
+    log.info("Fetched records from sheet:${sheetName} =>  ${response}");
     return _toCaseRecords(response);
   }
 }

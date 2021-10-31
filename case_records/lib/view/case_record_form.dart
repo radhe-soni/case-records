@@ -254,7 +254,7 @@ class _CaseRecordFormState extends State<CaseRecordForm> with RestorationMixin {
       _showSnackbar("Submitting Feedback");
 
       // Submit 'feedbackForm' and save it in Google Sheets.
-      FormControllerSingletonExtension.getInstance(widget.googleSignInAccount)
+      FormControllerFactory.FACTORY.getInstance(widget.googleSignInAccount)
           .then((FormController formController) {
         formController.submitForm(feedbackForm, (String response) {
           print("Response: $response");
